@@ -1,7 +1,7 @@
 '''
 数据集：https://wws.lanzous.com/ijlcmh29pmf
 电脑原因，仅训练100个数据，数据过多内存溢出了。
-需要迭代420次以上
+需要迭代420次以上-
 '''
 
 import string
