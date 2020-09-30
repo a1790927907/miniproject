@@ -1,3 +1,7 @@
+'''
+minist手写数字数据集，训练100个，过多个人电脑内存会溢出
+'''
+
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import os
