@@ -18,7 +18,9 @@ class JdSpider(scrapy.Spider):
         for data in all_data['data']:
             item = JdbookItem()
             headers = {'user-agent': random.choice(self.settings['UA_LIST'])}
+            #获取一级标题
             item['first_title'] = data['title']
+            #获取一级标题的id
             pool_id = data['ext_info']['poolId']
             _ = execjs.eval('new Date().getTime()')
             item_copy = copy.deepcopy(item)
@@ -34,12 +36,15 @@ class JdSpider(scrapy.Spider):
             logger.warning(f'url: {response.url} 获取标题失败')
             return
         for data in all_data['data']:
+            #获取二级标题
             item['second_title'] = data['title']
             for third_data in data['children']:
                 headers = {'user-agent': random.choice(self.settings['UA_LIST'])}
+                #获取三级标题
                 item['third_title'] = third_data['title']
                 item['link_url'] = third_data['link_value']
                 item_copy = copy.deepcopy(item)
+                #不同url使用不同回调函数
                 if (self.allowed_domains[0] + '/booktop') in item['link_url']:
                     yield scrapy.Request(item['link_url'], callback=self.parse_book_name_book_jd,headers=headers,meta={'item': item_copy})
                 elif self.allowed_domains[1] in item['link_url']:
@@ -50,6 +55,7 @@ class JdSpider(scrapy.Spider):
                     yield scrapy.Request(item['link_url'],callback=self.parse_book_in_item_page,headers=headers,meta={'item':item_copy})
 
     def parse_book_in_item_page(self,response):
+        #部分直接进入item页面的url
         item = copy.deepcopy(response.meta['item'])
         headers = {'user-agent': random.choice(self.settings['UA_LIST'])}
         item['book_name'] = response.xpath('//div[@class="sku-name"]/text()').extract_first()
@@ -61,6 +67,7 @@ class JdSpider(scrapy.Spider):
         yield scrapy.Request(response.url,callback=self.parse_price_info,headers=headers,meta={'item':item_copy})
 
     def parse_book_name_list_jd(self,response):
+        #此url下book的信息在另一个url下
         item = copy.deepcopy(response.meta['item'])
         #先看看cat在不在url里，如果在的话，不管tid
         if 'cat' in response.url:
@@ -80,6 +87,7 @@ class JdSpider(scrapy.Spider):
             yield scrapy.Request(url,callback=self.parse_detail,headers=headers,meta={'item':item})
 
     def parse_book_name_search_jd(self,response):
+        #此url下大部分和list.jd.com一样，但是图书的具体信息是不一样的url
         item = copy.deepcopy(response.meta['item'])
         params = re.findall(r'Search\?(.*)',response.url,re.I)[0]
         advware_count = int(re.findall(r's.init\(.*?,.*?,.*?,.*?,.*?,.*?,.*?,.*?,(.*?),.*?\)',response.text, re.S)[0].replace(' ', ''))
@@ -97,6 +105,7 @@ class JdSpider(scrapy.Spider):
 
 
     def parse_book_name_book_jd(self,response):
+        # 此url下book的信息能直接获得
         item = copy.deepcopy(response.meta['item'])
         item_bak = copy.deepcopy(response.meta['item'])
         all_info = response.xpath('//div[@class="mc"]//ul/li')
@@ -116,6 +125,7 @@ class JdSpider(scrapy.Spider):
 
 
     def parse_detail(self,response):
+        #处理书名等等信息
         item = response.meta['item']
         all_name_and_url = response.xpath('//div[contains(@class,"p-name")]')
         all_img = response.xpath('//div[contains(@class,"p-img")]')
@@ -174,10 +184,11 @@ class JdSpider(scrapy.Spider):
         vender_id = response.meta['vender_id']
         url_stock = 'https://c0.3.cn/stock?skuId=' + sku_id + '&cat=' + response.meta['cat'] + '&venderId=' + vender_id + '&area=' + response.meta['area'] + '&buyNum=1&choseSuitSkuIds=&extraParam={%22originid%22:%221%22}&ch=1&fqsp=0&pduid='
         try:
+            #部分是有电子书的，所以需要获取电子书的价格
             item['price'] = all_data['m']
             item['e_book_price'] = all_data['p']
             item_copy = copy.deepcopy(item)
-            yield scrapy.Request(url_stock,callback=self.parse_comment,headers=headers,meta={'item':item_copy,'sku_id':sku_id})
+            yield scrapy.Request(url_stock,callback=self.parse_no_e_book_sku,headers=headers,meta={'item':item_copy,'sku_id':sku_id})
         except:
             item_copy = copy.deepcopy(item)
             yield scrapy.Request(url_stock,callback=self.parse_no_e_book_sku,headers=headers,meta={'item':item_copy,'sku_id':sku_id})
@@ -189,6 +200,7 @@ class JdSpider(scrapy.Spider):
         _ = str(execjs.eval('new Date().getTime()'))
         url_comment = 'https://club.jd.com/comment/productCommentSummaries.action?referenceIds=' + sku_id + '&_=' + _
         all_data = response.json()
+        #能获取到电子书,只需要获取一个是否有货即可
         if item.get('e_book_price'):
             item['stock_state'] = all_data['stock']['StockStateName']
         else:
@@ -199,6 +211,7 @@ class JdSpider(scrapy.Spider):
         yield scrapy.Request(url_comment,callback=self.parse_comment,headers=headers,meta={'item':item_copy})
 
     def parse_comment(self,response):
+        #获取评论数
         item = copy.deepcopy(response.meta['item'])
         try:
             all_data = response.json()['CommentsCount'][0]
