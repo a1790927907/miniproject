@@ -25,3 +25,5 @@ class YmxItem(scrapy.Item):
     freight = scrapy.Field()
     comments_good_rate = scrapy.Field()
     goods_price_type = scrapy.Field()
+    book_desc = scrapy.Field()
+    book_page = scrapy.Field()

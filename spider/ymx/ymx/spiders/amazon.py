@@ -48,7 +48,7 @@ class AmazonSpider(RedisSpider):
                     else:
                         continue
                     #排除不必要的url
-                    if '/b/' in item['item_url']:
+                    if '/b' in item['item_url']:
                         item_copy = copy.deepcopy(item)
                         yield scrapy.Request(item['item_url'],callback=self.parse_all_goods,meta={'item':item_copy})
 

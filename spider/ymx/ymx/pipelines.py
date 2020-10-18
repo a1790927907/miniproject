@@ -14,7 +14,8 @@ class YmxPipeline:
         self.collection = self.mongo.amazon.goods
 
     def process_item(self, item, spider):
-        item = self.deal_info(item)
+        if spider.name == 'amazon':
+            item = self.deal_info(item)
         print(item)
         # self.collection.insert(dict(item))
         return item
